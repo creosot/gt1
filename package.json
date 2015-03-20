@@ -1,0 +1,16 @@
+{
+  "name": "gt1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "moment": "^2.9.0",
+    "socket.io": "^1.3.5"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "creosot",
+  "license": "ISC"
+}
