@@ -54,8 +54,6 @@ net.createServer(function(socket){
             var payload = [];
             var gl_length = 10;
             for(var i = 0; i < count_record; i++) {
-                console.log("buf = " + buf.length);
-                console.log("gl_length = " + gl_length);
                 if(gl_length >= buf.length - 5){
                     myError(7);
                     socket.destroy();
@@ -65,8 +63,6 @@ net.createServer(function(socket){
                 payload[i] = {};
                 payload[i].IMEI = imei;
                 var length = 26;   //start s numbers_one_byte_io
-                console.log("buf_payload = " + buf_payload.length);
-                console.log("length = " + length);
                 if(length >= buf_payload.length){
                     myError(7);
                     socket.destroy();
@@ -133,7 +129,6 @@ net.createServer(function(socket){
                 gl_length += ++length; //length=49 - 2n record
             }
             var res = buf.slice(9,10);
-            console.log(res);
             socket.write('\x00' + '\x00' + '\x00' + res);
             var str = JSON.stringify(payload,'',4);
             console.log(str);
