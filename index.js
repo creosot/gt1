@@ -52,11 +52,26 @@ net.createServer(function(socket){
                 return;
             }
             var payload = [];
-            for(var i = 0; i < count_record; i++){
-                var buf_payload = new Buffer(length_record);
-                buf_payload = buf.slice(10+i*length_record, 10+length_record+i*length_record);
+            var gl_length = 10;
+            for(var i = 0; i < count_record; i++) {
+                console.log("buf = " + buf.length);
+                console.log("gl_length = " + gl_length);
+                if(gl_length >= buf.length - 5){
+                    myError(7);
+                    socket.destroy();
+                    return;
+                }
+                var buf_payload = buf.slice(gl_length, buf.length - 5);
                 payload[i] = new Object();
                 payload[i].IMEI = imei;
+                var length = 26;   //start s numbers_one_byte_io
+                console.log("buf_payload = " + buf_payload.length);
+                console.log("length = " + length);
+                if(length >= buf_payload.length){
+                    myError(7);
+                    socket.destroy();
+                    return;
+                }
                 var unix_time = parseInt(buf_payload.toString('hex', 0, 8), 16);
                 payload[i].timestamp = new moment(unix_time).format('MMMM Do YYYY, H:mm:ss');
                 payload[i].latitude = buf_payload.readUInt32BE(9)/10000000;
@@ -64,19 +79,58 @@ net.createServer(function(socket){
                 payload[i].altitude = buf_payload.readUInt16BE(17);
                 payload[i].sputnik = buf_payload.readUInt8(21);
                 payload[i].speed = buf_payload.readUInt16BE(22);
-                payload[i].event_io = buf_payload.readUInt8(24);
-                payload[i].io_in_record = buf_payload.readUInt8(25);
-                payload[i].number_of_io1b = buf_payload.readUInt8(26);
-//                var number_of_io1b = buf_payload.readUInt8(26);
-
-//                console.log(buf_payload);
+                payload[i].number_event_io = buf_payload.readUInt8(24);
+                payload[i].numbers_io_in_record = buf_payload.readUInt8(25);
+                //one_byte_io
+                var numbers_one_byte_io = buf_payload.readUInt8(length);
+                payload[i].numbers_one_byte_io = numbers_one_byte_io;
+                length += numbers_one_byte_io * 2;  //1-one_byte_io= length=26+2=28
+                console.log("1/length = " + length);
+                if(++length >= buf_payload.length){ //length=29 - numbers_two_byte_io
+                    myError(7);
+                    socket.destroy();
+                    return;
+                }
+                //two_byte_io
+                var numbers_two_byte_io = buf_payload.readUInt8(length); //length=29
+                length += numbers_two_byte_io + numbers_two_byte_io * 2;  //1-two_byte_io= length=29+3=32
+                payload[i].numbers_two_byte_io = numbers_two_byte_io;
+                console.log("2/length = " + length);
+                if(++length >= buf_payload.length){ //length=33 - numbers_four_byte_io
+                    myError(7);
+                    socket.destroy();
+                    return;
+                }
+                //four_byte_io
+                var numbers_four_byte_io = buf_payload.readUInt8(length); //length=33
+                length += numbers_four_byte_io + numbers_four_byte_io * 4;  //1-four_byte_io= length=33+5=38
+                payload[i].numbers_four_byte_io = numbers_four_byte_io;
+                console.log("4/length = " + length);
+                if(++length >= buf_payload.length){ //length=39 - numbers_eight_byte_io
+                    myError(7);
+                    socket.destroy();
+                    return;
+                }
+                //eight_byte_io
+                var numbers_eight_byte_io = buf_payload.readUInt8(length); //length=39
+                length += numbers_eight_byte_io + numbers_eight_byte_io * 8;  //1-eight_byte_io= length=39+9=48
+                payload[i].numbers_eight_byte_io = numbers_eight_byte_io;
+                console.log("8/length = " + length);
+                if(length >= buf_payload.length){
+                    myError(7);
+                    socket.destroy();
+                    return;
+                }
+                gl_length += ++length; //length=49 - 2n record
             }
+            var res = buf.slice(9,10);
+            console.log(res);
+            socket.write('\x00' + '\x00' + '\x00' + res);
             var str = JSON.stringify(payload,'',4);
             console.log(str);
         }
-
     });
-}).listen(3000);
+}).listen(3333);
 
 function myError(code){
     switch(code){
@@ -97,6 +151,9 @@ function myError(code){
             break;
         case 6:
             console.log("ERROR: difference length data array");
+            break;
+        case 7:
+            console.log("ERROR: length > length_buf");
             break;
         default:
             console.log("ERROR");
